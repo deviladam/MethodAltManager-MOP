@@ -24,7 +24,7 @@ local remove_button_size = 12;
 
 local min_x_size = 300;
 
-local min_level = 120;
+local min_level = 90;
 local name_label = "" -- Name
 local mythic_done_label = "Highest M+ done"
 local mythic_keystone_label = "Keystone"
@@ -38,7 +38,7 @@ local resources_label = "War Resources"
 local worldboss_label = "Worldboss"
 local conquest_label = "Conquest"
 local islands_label = "Islands"
-local pearls_label = "Manapearls"
+local valor_label = "Valor"
 local neck_label = "Neck level"
 local residuum_label = "Residuum"
 
@@ -120,7 +120,7 @@ do
 	main_frame.background = main_frame:CreateTexture(nil, "BACKGROUND");
 	main_frame.background:SetAllPoints();
 	main_frame.background:SetDrawLayer("ARTWORK", 1);
-	main_frame.background:SetColorTexture(0, 0, 0, 0.5);
+	main_frame.background:SetTexture(0,0,0,.5);
 	
 	main_frame.scan_tooltip = CreateFrame('GameTooltip', 'DepletedTooltipScan', UIParent, 'GameTooltipTemplate');
 	
@@ -134,7 +134,6 @@ do
 	main_frame:RegisterEvent("PLAYER_LOGOUT");
 	main_frame:RegisterEvent("QUEST_TURNED_IN");
 	main_frame:RegisterEvent("BAG_UPDATE_DELAYED");
-	main_frame:RegisterEvent("ARTIFACT_XP_UPDATE");
 	main_frame:RegisterEvent("CHAT_MSG_CURRENCY");
 	main_frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE");
   	main_frame:RegisterEvent("PLAYER_LEAVING_WORLD");
@@ -165,6 +164,7 @@ do
 	main_frame:Hide();
 end
 
+--DB tábla inicializálása (alts, data)
 function AltManager:InitDB()
 	local t = {};
 	t.alts = 0;
@@ -200,6 +200,10 @@ function AltManager:OnLogin()
 	AltManager:MakeBorder(self.main_frame, 5);
 end
 
+
+--ADDON_LOADED event unregister
+--DB inicializálása, ha nincsen még
+--vmi ellenőrzés
 function AltManager:OnLoad()
 	self.main_frame:UnregisterEvent("ADDON_LOADED");
 	
@@ -211,13 +215,6 @@ function AltManager:OnLoad()
 	end
 
 	self.addon_loaded = true
-	C_MythicPlus.RequestRewards();
-	C_MythicPlus.RequestCurrentAffixes();
-	C_MythicPlus.RequestMapInfo();
-	for k,v in pairs(dungeons) do
-		-- request info in advance
-		C_MythicPlus.RequestMapInfo(k);
-	end
 end
 
 function AltManager:CreateFontFrame(parent, x_size, height, relative_to, y_offset, label, justify)
@@ -245,6 +242,7 @@ function AltManager:Keyset()
 	return keyset
 end
 
+--Reset utáni adatok törlése
 function AltManager:ValidateReset()
 	local db = MethodAltManagerDB
 	if not db then return end;
@@ -387,24 +385,26 @@ local get_current_questline_quest = QuestUtils_GetCurrentQuestLineQuest
 -- end
 
 function getConquestCap()
-    local CONQUEST_QUESTLINE_ID = 782;
-    local currentQuestID = get_current_questline_quest(CONQUEST_QUESTLINE_ID);
+    --local CONQUEST_QUESTLINE_ID = 782;
+    --local currentQuestID = get_current_questline_quest(CONQUEST_QUESTLINE_ID);
 
     -- if not on a current quest that means all caught up for this week
-    if currentQuestID == 0 then
-        return 0, 0, 0;
-    end
+    --if currentQuestID == 0 then
+    --    return 0, 0, 0;
+    --end
 
-    if not HaveQuestData(currentQuestID) then
-        return 0, 0, nil;
-    end
+    --if not HaveQuestData(currentQuestID) then
+    --    return 0, 0, nil;
+    --end
 
-    local objectives = C_QuestLog.GetQuestObjectives(currentQuestID);
-    if not objectives or not objectives[1] then
-        return 0, 0, nil;
-    end
+    --local objectives = C_QuestLog.GetQuestObjectives(currentQuestID);
+    --if not objectives or not objectives[1] then
+    --    return 0, 0, nil;
+    --end
 
-    return objectives[1].numFulfilled, objectives[1].numRequired, currentQuestID;
+    --return objectives[1].numFulfilled, objectives[1].numRequired, currentQuestID;
+	--TODO
+	return 2872;
 end
 
 function AltManager:StoreData(data)
@@ -442,6 +442,8 @@ function AltManager:StoreData(data)
 	end
 end
 
+
+--Visszaadja a karakter táblát
 function AltManager:CollectData(do_artifact)
 	
 	if UnitLevel('player') < min_level then return end;
@@ -473,9 +475,7 @@ function AltManager:CollectData(do_artifact)
 		mine_old = MethodAltManagerDB.data[guid];
 	end
 	
-	C_MythicPlus.RequestRewards();
 	-- try the new api
-	highest_mplus = C_MythicPlus.GetWeeklyChestRewardLevel()
 	
 	--[[for k,v in pairs(dungeons) do
 		C_MythicPlus.RequestMapInfo(k);
@@ -545,7 +545,6 @@ function AltManager:CollectData(do_artifact)
 	local _, order_resources = GetCurrencyInfo(1560);
 
 	
-	local shipments = C_Garrison.GetLooseShipments(LE_GARRISON_TYPE_7_0)
 	local creation_time = nil
 	local duration = nil
 	local num_ready = nil
@@ -582,22 +581,8 @@ function AltManager:CollectData(do_artifact)
 	_, seals = GetCurrencyInfo(1580);
 	
 	seals_bought = 0
-	local gold_1 = IsQuestFlaggedCompleted(52834)
-	if gold_1 then seals_bought = seals_bought + 1 end
-	local gold_2 = IsQuestFlaggedCompleted(52838)
-	if gold_2 then seals_bought = seals_bought + 1 end
-	local resources_1 = IsQuestFlaggedCompleted(52837)
-	if resources_1 then seals_bought = seals_bought + 1 end
-	local resources_2 = IsQuestFlaggedCompleted(52840)
-	if resources_2 then seals_bought = seals_bought + 1 end
-	local marks_1 = IsQuestFlaggedCompleted(52835)
-	if marks_1 then seals_bought = seals_bought + 1 end
-	local marks_2 = IsQuestFlaggedCompleted(52839)
-	if marks_2 then seals_bought = seals_bought + 1 end
-	
-	
-	local class_hall_seal = IsQuestFlaggedCompleted(43510)
-	if class_hall_seal then seals_bought = seals_bought + 1 end
+	local bonus = IsQuestFlaggedCompleted(--[[TODO]]--)
+	if bonus then seals_bought = seals_bought + 3 end
 	
 	local uldir_lfr, uldir_normal, uldir_heroic, uldir_mythic = 0;
 
@@ -642,20 +627,23 @@ function AltManager:CollectData(do_artifact)
 	
 	local conquest = getConquestCap()
 	
-	local _, _, _, islands, _ = GetQuestObjectiveInfo(C_IslandsQueue.GetIslandsWeeklyQuestID(), 1, false);
-	local islands_finished = IsQuestFlaggedCompleted(C_IslandsQueue.GetIslandsWeeklyQuestID())
+	--local _, _, _, islands, _ = GetQuestObjectiveInfo(C_IslandsQueue.GetIslandsWeeklyQuestID(), 1, false);
+	
+	--DELETE
+	local islands_finished = true --IsQuestFlaggedCompleted(C_IslandsQueue.GetIslandsWeeklyQuestID())
 
 	
 	local _, ilevel = GetAverageItemLevel();
 
-	local _, pearls = GetCurrencyInfo(1721);
+	local _, valor = GetCurrencyInfo(396);
 	local _, residuum = GetCurrencyInfo(1718);
 
-	local location = C_AzeriteItem.FindActiveAzeriteItem()
-	local neck_level
-	if not location then neck_level = 0
-	else neck_level = C_AzeriteItem.GetPowerLevel(location)
-	end
+	--DELETE
+	--local location = C_AzeriteItem.FindActiveAzeriteItem()
+	local neck_level = 69
+	--if not location then neck_level = 0
+	--else neck_level = C_AzeriteItem.GetPowerLevel(location)
+	--end
 
 	-- store data into a table
 
@@ -674,7 +662,7 @@ function AltManager:CollectData(do_artifact)
 	char_table.conquest = conquest;
 	char_table.islands =  islands; 
 	char_table.islands_finished = islands_finished;
-	char_table.pearls = pearls
+	char_table.valor = valor
 	char_table.residuum = residuum
 	char_table.neck_level = neck_level
 	
@@ -899,10 +887,10 @@ function AltManager:CreateContent()
 			label = resources_label,
 			data = function(alt_data) return alt_data.order_resources and tostring(alt_data.order_resources) or "0" end,
 		},
-		pearls = {
+		valor = {
 			order = 9.5,
-			label = pearls_label,
-			data = function(alt_data) return alt_data.pearls and tostring(alt_data.pearls) or "0" end,
+			label = valor_label,
+			data = function(alt_data) return alt_data.valor and tostring(alt_data.valor) or "0" end,
 		},
 		-- sort of became irrelevant for now
 		-- worldbosses = {
@@ -1043,7 +1031,7 @@ function AltManager:MakeTopBottomTextures(frame)
 		frame.topPanelTex:SetAllPoints();
 		--frame.topPanelTex:SetSize(frame:GetWidth(), 30);
 		frame.topPanelTex:SetDrawLayer("ARTWORK", -5);
-		frame.topPanelTex:SetColorTexture(0, 0, 0, 0.7);
+		frame.topPanelTex:SetTexture(0,0,0,.7);
 		
 		frame.topPanelString = frame.topPanel:CreateFontString("Method name");
 		frame.topPanelString:SetFont("Fonts\\FRIZQT__.TTF", 20)
@@ -1058,7 +1046,7 @@ function AltManager:MakeTopBottomTextures(frame)
 		frame.topPanelString:Show();
 		
 	end
-	frame.bottomPanel:SetColorTexture(0, 0, 0, 0.7);
+	frame.bottomPanel:SetTexture(0,0,0,.7);
 	frame.bottomPanel:ClearAllPoints();
 	frame.bottomPanel:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 0);
 	frame.bottomPanel:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, 0);
@@ -1160,7 +1148,8 @@ function AltManager:GetNextDailyResetTime()
 end
 
 function AltManager:GetServerOffset()
-	local serverDay = C_Calendar.GetDate().weekday - 1 -- 1-based starts on Sun
+	local serverDay, _, _, _ = CalendarGetDate();
+		serverDay = serverDay - 1; -- 1-based starts on Sun
 	local localDay = tonumber(date("%w")) -- 0-based starts on Sun
 	local serverHour, serverMinute = GetGameTime()
 	local localHour, localMinute = tonumber(date("%H")), tonumber(date("%M"))
@@ -1202,7 +1191,7 @@ end
 
 function AltManager:GetWoWDate()
 	local hour = tonumber(date("%H"));
-	local day = C_Calendar.GetDate().weekday;
+	local day, _, _, _ = CalendarGetDate();
 	return day, hour;
 end
 
