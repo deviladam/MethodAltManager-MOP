@@ -5,7 +5,7 @@ _G["AltManager"] = AltManager;
 
 -- Made by: Qooning - Tarren Mill <Method>, 2017-2019
 -- updates for Bfa by: Kabootzey - Tarren Mill <Ended Careers>, 2018
--- Last edit: 07/09/2019
+-- reworked for Mop (SoO): Darkpaladino - Ragnaros, 2019
 
 local Dialog = LibStub("LibDialog-1.0")
 
@@ -26,23 +26,21 @@ local min_x_size = 300;
 
 local min_level = 90;
 local name_label = "" -- Name
-local mythic_done_label = "Highest M+ done"
-local mythic_keystone_label = "Keystone"
-local seals_owned_label = "Seals owned"
-local seals_bought_label = "Seals obtained"
-local artifact_reaserch_label = "AK level"
-local artifact_research_time_label = "Next level in"
-local depleted_label = "Depleted"
-local nightbane_label = "Nightbane"
-local resources_label = "War Resources"
-local worldboss_label = "Worldboss"
-local conquest_label = "Conquest"
-local islands_label = "Islands"
-local valor_label = "Valor"
-local neck_label = "Neck level"
-local residuum_label = "Residuum"
+--bonusroll
+local lesser_charm_label = "Lesser Charm"
+local elder_charm_label = "Elder Charm"
+local mogu_rune_label = "Mogu Rune"
+local seals_owned_label = "Wf Seals owned"
+local seals_bought_label = "Wf Seals obtained"
 
-local VERSION = "1.5.2"
+local valor_label = "Valor"
+local valor_weekly_label = "Valor Cap"
+local conquest_label = "Conquest"
+local conquest_weekly_label = "Conquest Cap"
+
+local worldboss_label = "Worldboss"
+
+local VERSION = "0.5.0"
 
 local dungeons = {
 	-- BFA
@@ -120,7 +118,7 @@ do
 	main_frame.background = main_frame:CreateTexture(nil, "BACKGROUND");
 	main_frame.background:SetAllPoints();
 	main_frame.background:SetDrawLayer("ARTWORK", 1);
-	main_frame.background:SetTexture(0,0,0,.5);
+	main_frame.background:SetTexture(0,0,0,.7);
 	
 	main_frame.scan_tooltip = CreateFrame('GameTooltip', 'DepletedTooltipScan', UIParent, 'GameTooltipTemplate');
 	
@@ -260,27 +258,16 @@ function AltManager:ValidateReset()
 			-- reset this alt
 			char_table.seals_bought = 0;
 			char_table.dungeon = "Unknown";
-			char_table.level = "?";
-			char_table.highest_mplus = 0;
-			char_table.is_depleted = false;
 			char_table.expires = self:GetNextWeeklyResetTime();
 			char_table.worldboss = "-";
 			
-			char_table.islands = 0;
-			char_table.islands_finished = false;
+			char_table.conquest_earned_this_week = 0;
+			char_table.valor_earned_this_week = 0;
+			char_table.soo_felx = 0;
+			char_table.soo_normal = 0;
+			char_table.soo_heroic = 0;
 			
-			char_table.conquest = 0;
-			char_table.uldir_normal = 0;
-			char_table.uldir_heroic = 0;
-			char_table.uldir_mythic = 0;
 
-			char_table.bod_normal = 0;
-			char_table.bod_heroic = 0;
-			char_table.bod_mythic = 0;
-
-			char_table.ep_normal = 0;
-			char_table.ep_heroic = 0;
-			char_table.ep_mythic = 0;
 
 
 		end
@@ -460,14 +447,10 @@ function AltManager:CollectData(do_artifact)
 	local _, class = UnitClass('player')
 	local dungeon = nil;
 	local expire = nil;
-	local level = nil;
 	local seals = nil;
 	local seals_bought = nil;
-	local artifact_level = nil;
 	local next_research = nil;
-	local highest_mplus = 0;
-	local depleted = false;
-
+	
 	local guid = UnitGUID('player');
 
 	local mine_old = nil
@@ -475,18 +458,8 @@ function AltManager:CollectData(do_artifact)
 		mine_old = MethodAltManagerDB.data[guid];
 	end
 	
-	-- try the new api
-	
-	--[[for k,v in pairs(dungeons) do
-		C_MythicPlus.RequestMapInfo(k);
-		-- there is a problem with relogging and retaining old value :(
-		local _, l = C_MythicPlus.GetWeeklyBestForMap(k);
-		if l and l > highest_mplus then
-			highest_mplus = l;
-		end
-	end ]]--
-	
-	-- find keystone
+	-- find keystone (No keystone in Mop)
+	--[[
 	local keystone_found = false;
 	for container=BACKPACK_CONTAINER, NUM_BAG_SLOTS do
 		local slots = GetContainerNumSlots(container)
@@ -513,17 +486,10 @@ function AltManager:CollectData(do_artifact)
 			end
 		end
 	end
-  
-  -- nice idea, but these functions return weird values on login and logout
-  --dungeon = C_MythicPlus.GetOwnedKeystoneChallengeMapID()
-  --level = C_MythicPlus.GetOwnedKeystoneLevel()
-  
-  --if dungeon then keystone_found = true end
-  
 	if not keystone_found then
 		dungeon = "Unknown";
 		level = "?"
-	end
+	end]]--
 	
 	if do_artifact and HasArtifactEquipped() then
 		if not ArtifactFrame then
@@ -534,35 +500,17 @@ function AltManager:CollectData(do_artifact)
 		if (not ArtifactFrame or not ArtifactFrame:IsShown()) then
 			SocketInventoryItem(INVSLOT_MAINHAND);
 		end
-		artifact_level = C_ArtifactUI.GetArtifactKnowledgeLevel()
 		-- close artifact
 		if not is_open and ArtifactFrame and ArtifactFrame:IsShown() and C_ArtifactUI.IsViewedArtifactEquipped() then
 			C_ArtifactUI.Clear();
 		end
 	end
 
-	-- order resources
-	local _, order_resources = GetCurrencyInfo(1560);
-
-	
 	local creation_time = nil
 	local duration = nil
 	local num_ready = nil
 	local num_total = nil
 	local found_research = false
-	
-	--[[for i = 1, #shipments do
-		local name, _, _, numReady, numTotal, creationTime, duration_l = C_Garrison.GetLandingPageShipmentInfoByContainerID(shipments[i])
-		
-		if name == GetItemInfo(139390) then		-- the name must be "Artifact Research Notes"
-			found_research = true;
-			creation_time = creationTime
-			duration = duration_l
-			num_ready = numReady
-			num_total = numTotal
-		end
-	end ]]--
-	
 	
 	if found_research and num_ready == 0 then
 		local remaining = (creation_time + duration) - time();
@@ -578,33 +526,27 @@ function AltManager:CollectData(do_artifact)
 		next_research = 0;
 	end
 	
-	_, seals = GetCurrencyInfo(1580);
-	
+	local _, lesser_charm = GetCurrencyInfo(738);
+	local _, elder_charm = GetCurrencyInfo(697);
+	local _, mogu_rune = GetCurrencyInfo(752);
+	_, seals = GetCurrencyInfo(776);
 	seals_bought = 0
-	local bonus = IsQuestFlaggedCompleted(--[[TODO]]--)
-	if bonus then seals_bought = seals_bought + 3 end
 	
-	local uldir_lfr, uldir_normal, uldir_heroic, uldir_mythic = 0;
+	local bonusRoll = IsQuestFlaggedCompleted(33133)
+	if bonusRoll then seals_bought = seals_bought + 3 end
+	
+	local soo_lfr, soo_flex, soo_normal, soo_heroic = 0;
 
 	local saves = GetNumSavedInstances();
 	for i = 1, saves do
 		local name, _, reset, _, _, _, _, _, _, difficulty, bosses, killed_bosses = GetSavedInstanceInfo(i);
 
 		-- check for raids
-		if name == C_Map.GetMapInfo(1148).name and reset > 0 then
-			if difficulty == "Normal" then uldir_normal = killed_bosses end
-			if difficulty == "Heroic" then uldir_heroic = killed_bosses end
-			if difficulty == "Mythic" then uldir_mythic = killed_bosses end
-		end
-		if name == C_Map.GetMapInfo(1352).name and reset > 0 then
-			if difficulty == "Normal" then bod_normal = killed_bosses end
-			if difficulty == "Heroic" then bod_heroic = killed_bosses end
-			if difficulty == "Mythic" then bod_mythic = killed_bosses end
-		end
-		if name == C_Map.GetMapInfo(1512).name and reset > 0 then
-			if difficulty == "Normal" then ep_normal = killed_bosses end
-			if difficulty == "Heroic" then ep_heroic = killed_bosses end
-			if difficulty == "Mythic" then ep_mythic = killed_bosses end
+		if name == C_Map.GetMapInfo(556).name and reset > 0 then
+			if difficulty == "Flexible" then soo_flex = killed_bosses end
+			if difficulty == "Normal" then soo_normal = killed_bosses end
+			if difficulty == "Heroic" then soo_heroic = killed_bosses end
+
 		end
 	end
 	
@@ -626,24 +568,13 @@ function AltManager:CollectData(do_artifact)
 	end
 	
 	local conquest = getConquestCap()
-	
-	--local _, _, _, islands, _ = GetQuestObjectiveInfo(C_IslandsQueue.GetIslandsWeeklyQuestID(), 1, false);
-	
 	--DELETE
-	local islands_finished = true --IsQuestFlaggedCompleted(C_IslandsQueue.GetIslandsWeeklyQuestID())
-
 	
 	local _, ilevel = GetAverageItemLevel();
 
-	local _, valor = GetCurrencyInfo(396);
-	local _, residuum = GetCurrencyInfo(1718);
+	local _, valor, _, valor_earned_this_week = GetCurrencyInfo(396);
+	local _, conquest, _, conquest_earned_this_week, conquest_weekly_max  = GetCurrencyInfo(390);
 
-	--DELETE
-	--local location = C_AzeriteItem.FindActiveAzeriteItem()
-	local neck_level = 69
-	--if not location then neck_level = 0
-	--else neck_level = C_AzeriteItem.GetPowerLevel(location)
-	--end
 
 	-- store data into a table
 
@@ -653,36 +584,28 @@ function AltManager:CollectData(do_artifact)
 	char_table.name = name;
 	char_table.class = class;
 	char_table.ilevel = ilevel;
+	
+	char_table.lesser_charm = lesser_charm
+	char_table.elder_charm = elder_charm;
+	char_table.mogu_rune = mogu_rune;
 	char_table.seals = seals;
 	char_table.seals_bought = seals_bought;
-	char_table.dungeon = dungeon;
-	char_table.level = level;
-	char_table.highest_mplus = highest_mplus;
-	char_table.worldboss = worldboss;
-	char_table.conquest = conquest;
-	char_table.islands =  islands; 
-	char_table.islands_finished = islands_finished;
-	char_table.valor = valor
-	char_table.residuum = residuum
-	char_table.neck_level = neck_level
 	
+	char_table.valor = valor;
+	char_table.valor_earned_this_week = valor_earned_this_week;
+	
+	char_table.conquest = conquest;
+	char_table.conquest_earned_this_week = conquest_earned_this_week;
+	char_table.conquest_weekly_max = conquest_weekly_max;
+	
+	char_table.dungeon = dungeon;
+	char_table.worldboss = worldboss;
+	--Raid Siege of Orgrimmar
+	char_table.soo_flex = soo_flex;
+	char_table.soo_normal = soo_normal;
+	char_table.soo_heroic = soo_heroic;
 
-	char_table.uldir_normal = uldir_normal;
-	char_table.uldir_heroic = uldir_heroic;
-	char_table.uldir_mythic = uldir_mythic;
 
-	char_table.bod_normal = bod_normal;
-	char_table.bod_heroic = bod_heroic;
-	char_table.bod_mythic = bod_mythic;
-
-	char_table.ep_normal = ep_normal;
-	char_table.ep_heroic = ep_heroic;
-	char_table.ep_mythic = ep_mythic;
-
-	char_table.order_resources = order_resources;
-	char_table.veiled_argunite = veiled_argunite;
-	char_table.wakening_essence = wakening_essence;
-	char_table.is_depleted = depleted;
 	char_table.expires = self:GetNextWeeklyResetTime();
 	
 	
@@ -847,62 +770,63 @@ function AltManager:CreateContent()
 		},
 		ilevel = {
 			order = 2,
-			data = function(alt_data) return string.format("%.2f (%d)", alt_data.ilevel or 0, alt_data.neck_level or 0) end,
+			data = function(alt_data) return string.format("%.2f", alt_data.ilevel or 0) end,
 			justify = "TOP",
 			font = "Fonts\\FRIZQT__.TTF",
 			remove_button = function(alt_data) return self:CreateRemoveButton(function() AltManager:RemoveCharacterByGuid(alt_data.guid) end) end
 		},
-		mplus = {
-			order = 3,
-			label = mythic_done_label,
-			data = function(alt_data) return tostring(alt_data.highest_mplus) end, 
-		},
-		keystone = {
-			order = 4,
-			label = mythic_keystone_label,
-			data = function(alt_data) local depleted_string = alt_data.is_depleted and " (D)" or ""; return (dungeons[alt_data.dungeon] or alt_data.dungeon) .. " +" .. tostring(alt_data.level) .. depleted_string; end,
-		},
-		seals_owned = {
-			order = 5,
-			label = seals_owned_label,
-			data = function(alt_data) return tostring(alt_data.seals) end,
-		},
-		seals_bought = {
-			order = 6,
-			label = seals_bought_label,
-			data = function(alt_data) return tostring(alt_data.seals_bought) end,
-		},
-		residuum = {
-			order = 7,
-			label = residuum_label,
-			data = function(alt_data) return alt_data.residuum and tostring(alt_data.residuum) or "0" end,
-		},
-		conquest_cap = {
-			order = 8,
-			label = conquest_label,
-			data = function(alt_data) return (alt_data.conquest and tostring(alt_data.conquest) or "?")  .. "/" .. "500"  end,
-		},
-		order_resources = {
-			order = 9,
-			label = resources_label,
-			data = function(alt_data) return alt_data.order_resources and tostring(alt_data.order_resources) or "0" end,
-		},
 		valor = {
-			order = 9.5,
+			order = 3,
 			label = valor_label,
 			data = function(alt_data) return alt_data.valor and tostring(alt_data.valor) or "0" end,
 		},
+		valor_cap = {
+			order = 4,
+			label = valor_weekly_label,
+			data = function(alt_data) return ((alt_data.valor_earned_this_week == 1000) and "Capped") or ((alt_data.valor_earned_this_week and tostring(alt_data.valor_earned_this_week)) or "?") .. "/1000"  end,
+		},
+		lesser_charm = {
+			order = 5,
+			label = lesser_charm_label,
+			data = function(alt_data) return alt_data.lesser_charm and tostring(alt_data.lesser_charm) or "0" end,
+		},
+		elder_charm = {
+			order = 6,
+			label = elder_charm_label,
+			data = function(alt_data) return alt_data.elder_charm and tostring(alt_data.elder_charm) or "0" end,
+		},
+		mogu_rune = {
+			order = 7,
+			label = mogu_rune_label,
+			data = function(alt_data) return tostring(alt_data.mogu_rune) end, 
+		},
+		seals_bought = {
+			order = 8,
+			label = seals_bought_label,
+			data = function(alt_data) return tostring(alt_data.seals_bought > 0) end,
+		},
+		seals_owned = {
+			order = 9,
+			label = seals_owned_label,
+			data = function(alt_data) return tostring(alt_data.seals) end,
+		},
+		conquest = {
+			order = 10,
+			label = conquest_label,
+			data = function(alt_data) return tostring(alt_data.conquest); end,
+		},
+		conquest_cap = {
+			order = 11,
+			label = conquest_weekly_label,
+			data = function(alt_data) return (alt_data.conquest_earned_this_week and tostring(alt_data.conquest_earned_this_week) or "?")  .. "/" .. (alt_data.conquest_weekly_max and tostring(alt_data.conquest_weekly_max) or "?")  end,
+		},
+
 		-- sort of became irrelevant for now
 		-- worldbosses = {
 		-- 	order = 10,
 		-- 	label = worldboss_label,
 		-- 	data = function(alt_data) return alt_data.worldboss or "?" end,
 		-- },
-		islands = {
-			order = 11,
-			label = islands_label,
-			data = function(alt_data) return (alt_data.islands_finished and "Capped") or ((alt_data.islands and tostring(alt_data.islands)) or "?") .. "/ 36K"  end,
-		},
 		dummy_line = {
 			order = 12,
 			label = " ",
@@ -928,20 +852,10 @@ function AltManager:CreateContent()
 				end
 			end,
 			rows = {
-				uldir = {
+				soo = {
 					order = 1,
-					label = "Uldir",
-					data = function(alt_data) return self:MakeRaidString(alt_data.uldir_normal, alt_data.uldir_heroic, alt_data.uldir_mythic) end
-				},
-				dazaralor = {
-					order = 2,
-					label = "Battle for Dazar'alor",
-					data = function(alt_data) return self:MakeRaidString(alt_data.bod_normal, alt_data.bod_heroic, alt_data.bod_mythic) end
-				},
-				eternal_palace = {
-					order = 3,
-					label = "The Eternal Palace",
-					data = function(alt_data) return self:MakeRaidString(alt_data.ep_normal, alt_data.ep_heroic, alt_data.ep_mythic) end
+					label = "Siege Of Orgrimmar",
+					data = function(alt_data) return self:MakeRaidString(alt_data.soo_flex, alt_data.soo_normal, alt_data.soo_heroic) end
 				}
 			}
 		}
@@ -977,17 +891,18 @@ function AltManager:CreateContent()
 
 end
 
-function AltManager:MakeRaidString(normal, heroic, mythic)
+function AltManager:MakeRaidString(flexible, normal, heroic)
+	if not flexible then flexible = 0 end
 	if not normal then normal = 0 end
 	if not heroic then heroic = 0 end
-	if not mythic then mythic = 0 end
+	
 
 	local string = ""
-	if mythic > 0 then string = string .. tostring(mythic) .. "M" end
-	if heroic > 0 and mythic > 0 then string = string .. "-" end
 	if heroic > 0 then string = string .. tostring(heroic) .. "H" end
-	if normal > 0 and (mythic > 0 or heroic > 0) then string = string .. "-" end
+	if normal > 0 and heroic > 0 then string = string .. "-" end
 	if normal > 0 then string = string .. tostring(normal) .. "N" end
+	if flexible > 0 and (heroic > 0 or normal > 0) then string = string .. "-" end
+	if flexible > 0 then string = string .. tostring(flexible) .. "F" end
 	return string == "" and "-" or string
 end
 
@@ -1031,7 +946,7 @@ function AltManager:MakeTopBottomTextures(frame)
 		frame.topPanelTex:SetAllPoints();
 		--frame.topPanelTex:SetSize(frame:GetWidth(), 30);
 		frame.topPanelTex:SetDrawLayer("ARTWORK", -5);
-		frame.topPanelTex:SetTexture(0,0,0,.7);
+		frame.topPanelTex:SetTexture(0,0,0,.8);
 		
 		frame.topPanelString = frame.topPanel:CreateFontString("Method name");
 		frame.topPanelString:SetFont("Fonts\\FRIZQT__.TTF", 20)
@@ -1040,13 +955,13 @@ function AltManager:MakeTopBottomTextures(frame)
 		frame.topPanelString:SetJustifyV("CENTER")
 		frame.topPanelString:SetWidth(260)
 		frame.topPanelString:SetHeight(20)
-		frame.topPanelString:SetText("Method Alt Manager");
+		frame.topPanelString:SetText("Insane Alt Manager");
 		frame.topPanelString:ClearAllPoints();
 		frame.topPanelString:SetPoint("CENTER", frame.topPanel, "CENTER", 0, 0);
 		frame.topPanelString:Show();
 		
 	end
-	frame.bottomPanel:SetTexture(0,0,0,.7);
+	frame.bottomPanel:SetTexture(0,0,0,.8);
 	frame.bottomPanel:ClearAllPoints();
 	frame.bottomPanel:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 0);
 	frame.bottomPanel:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 0, 0);
