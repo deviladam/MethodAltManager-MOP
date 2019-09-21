@@ -542,10 +542,10 @@ function AltManager:CollectData(do_artifact)
 		local name, _, reset, _, _, _, _, _, _, difficulty, bosses, killed_bosses = GetSavedInstanceInfo(i);
 
 		-- check for raids
-		if name == C_Map.GetMapInfo(556).name and reset > 0 then
-			if difficulty == "Flexible" then soo_flex = killed_bosses end
-			if difficulty == "Normal" then soo_normal = killed_bosses end
-			if difficulty == "Heroic" then soo_heroic = killed_bosses end
+		if name == "Siege of Orgrimmar" and reset > 0 then
+			if string.find(difficulty, "Flexible") then soo_flex = killed_bosses end
+			if string.find(difficulty, "Normal") then soo_normal = killed_bosses end
+			if string.find(difficulty, "Heroic")  then soo_heroic = killed_bosses end
 
 		end
 	end
