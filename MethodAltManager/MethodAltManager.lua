@@ -803,7 +803,13 @@ function AltManager:CreateContent()
 		seals_bought = {
 			order = 8,
 			label = seals_bought_label,
-			data = function(alt_data) return tostring(alt_data.seals_bought > 0) end,
+			data = function(alt_data) 
+						if (alt_data.seals_bought > 0 ?) then
+							return "Done";
+						else
+							return "Available";
+						end
+				   end,
 		},
 		seals_owned = {
 			order = 9,
