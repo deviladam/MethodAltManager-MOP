@@ -543,7 +543,7 @@ function AltManager:CollectData(do_artifact)
 		-- check for raids
 		if name == "Siege of Orgrimmar" and reset > 0 then
 			if string.find(difficulty, "Flexible") then soo_flex = killed_bosses end
-			if string.find(difficulty, "Normal") then soo_normal = killed_bosses end
+			if difficulty == "10 Player" or difficulty == "25 Player"  then soo_normal = killed_bosses end
 			if string.find(difficulty, "Heroic")  then soo_heroic = killed_bosses end
 
 		end
