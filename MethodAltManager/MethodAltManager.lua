@@ -257,7 +257,6 @@ function AltManager:ValidateReset()
 		if time() > expiry then
 			-- reset this alt
 			char_table.seals_bought = 0;
-			char_table.dungeon = "Unknown";
 			char_table.expires = self:GetNextWeeklyResetTime();
 			char_table.worldboss = "-";
 			
@@ -1027,6 +1026,7 @@ function AltManager:GetNextWeeklyResetTime()
 			self.resetDays.DLHoffset = -3 
 		elseif region == "EU" then
 			self.resetDays["3"] = true -- wednesday
+			self.resetDays.DLHoffset = 3
 		elseif region == "CN" or region == "KR" or region == "TW" then -- XXX: codes unconfirmed
 			self.resetDays["4"] = true -- thursday
 		else
@@ -1039,7 +1039,7 @@ function AltManager:GetNextWeeklyResetTime()
 	while not self.resetDays[date("%w",nightlyReset+offset)] do
 		nightlyReset = nightlyReset + 24 * 3600
 	end
-	return nightlyReset
+	return nightlyReset + offset
 end
 
 function AltManager:GetNextDailyResetTime()
@@ -1088,13 +1088,19 @@ end
 function AltManager:GetRegion()
 	if not self.region then
 		local reg
+		if string.find(GetCVar("realmList"),".hu") then
+			self.region = "EU"
+			return self.region
+		end
 		reg = GetCVar("portal")
 		if reg == "public-test" then -- PTR uses US region resets, despite the misleading realm name suffix
 			reg = "US"
 		end
 		if not reg or #reg ~= 2 then
-			local gcr = GetCurrentRegion()
-			reg = gcr and ({ "US", "KR", "EU", "TW", "CN" })[gcr]
+			if (GetCurrentRegion ~= nil) then
+				local gcr = GetCurrentRegion()
+				reg = gcr and ({ "US", "KR", "EU", "TW", "CN" })[gcr]
+			end
 		end
 		if not reg or #reg ~= 2 then
 			reg = (GetCVar("realmList") or ""):match("^(%a+)%.")
@@ -1113,6 +1119,7 @@ end
 function AltManager:GetWoWDate()
 	local hour = tonumber(date("%H"));
 	local day, _, _, _ = CalendarGetDate();
+	day = day - 1;
 	return day, hour;
 end
 
