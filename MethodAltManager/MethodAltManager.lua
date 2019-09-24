@@ -30,8 +30,8 @@ local name_label = "" -- Name
 local lesser_charm_label = "Lesser Charm"
 local elder_charm_label = "Elder Charm"
 local mogu_rune_label = "Mogu Rune"
-local seals_owned_label = "Wf Seals owned"
-local seals_bought_label = "Wf Seals obtained"
+local seals_owned_label = "Warforged Seal"
+local seals_bought_label = "Wf Seals quest"
 
 local valor_label = "Valor"
 local valor_weekly_label = "Valor Cap"
@@ -813,7 +813,7 @@ function AltManager:CreateContent()
 		seals_owned = {
 			order = 9,
 			label = seals_owned_label,
-			data = function(alt_data) return tostring(alt_data.seals) end,
+			data = function(alt_data) return tostring(alt_data.seals) .. "/10" end,
 		},
 		conquest = {
 			order = 10,
