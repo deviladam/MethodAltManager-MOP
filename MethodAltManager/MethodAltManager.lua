@@ -538,10 +538,10 @@ function AltManager:CollectData(do_artifact)
 
 	local saves = GetNumSavedInstances();
 	for i = 1, saves do
-		local name, _, reset, _, _, _, _, _, _, difficulty, bosses, killed_bosses = GetSavedInstanceInfo(i);
+		local name, _, reset, difficultyID, locked, extended, _, _, _, difficulty, bosses, killed_bosses = GetSavedInstanceInfo(i);
 
 		-- check for raids
-		if name == "Siege of Orgrimmar" and reset > 0 then
+		if name == "Siege of Orgrimmar" and locked and not extended then
 			if string.find(difficulty, "Flexible") then soo_flex = killed_bosses end
 			if difficulty == "10 Player" or difficulty == "25 Player"  then soo_normal = killed_bosses end
 			if string.find(difficulty, "Heroic")  then soo_heroic = killed_bosses end
