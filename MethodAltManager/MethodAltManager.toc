@@ -1,5 +1,4 @@
-## Interface: 80200
-## Title: Method Alt Manager
+## Interface: 50400## Title: Method Alt Manager
 ## Author: Qoning
 ## Version: v2
 ## Notes: Concise information about your alts and weekly stuff.

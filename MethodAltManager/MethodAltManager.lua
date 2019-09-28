@@ -456,8 +456,6 @@ function AltManager:CollectData(do_artifact)
 		mine_old = MethodAltManagerDB.data[guid];
 	end
 	if mine_old then
-		print("mine_old")
-		print(mine_old.coin_chance)
 		coin_chance = mine_old.coin_chance;
 	end
 	
