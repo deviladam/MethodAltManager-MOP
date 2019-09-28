@@ -844,7 +844,9 @@ function AltManager:CreateContent()
 			label = seals_owned_label,
 			data = function(alt_data) return tostring(alt_data.seals) .. "/10" end,
 		},
-		conquest = {
+		
+		--CONQUEST
+		--[[conquest = {
 			order = 10,
 			label = conquest_label,
 			data = function(alt_data) return tostring(alt_data.conquest); end,
@@ -853,7 +855,7 @@ function AltManager:CreateContent()
 			order = 11,
 			label = conquest_weekly_label,
 			data = function(alt_data) return (alt_data.conquest_earned_this_week and tostring(alt_data.conquest_earned_this_week) or "?")  .. "/" .. (alt_data.conquest_weekly_max and tostring(alt_data.conquest_weekly_max) or "?")  end,
-		},
+		},]]--
 
 		-- sort of became irrelevant for now
 		-- worldbosses = {
