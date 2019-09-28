@@ -9,9 +9,8 @@ _G["AltManager"] = AltManager;
 
 local Dialog = LibStub("LibDialog-1.0")
 
---local sizey = 200;
-local sizey = 260;
-local instances_y_add = 85;
+local sizey = 280; 				-- +20 for one more row
+local instances_y_add = 25; 	-- +20 for one more row
 local xoffset = 0;
 local yoffset = 150;
 local alpha = 1;
@@ -32,6 +31,7 @@ local elder_charm_label = "Elder Charm"
 local mogu_rune_label = "Mogu Rune"
 local seals_owned_label = "Warforged Seal"
 local seals_bought_label = "Wf Seals quest"
+local coin_chance_label = "BonusRoll chance"
 
 local valor_label = "Valor"
 local valor_weekly_label = "Valor Cap"
@@ -403,7 +403,7 @@ function AltManager:StoreData(data)
 	if not data or not data.guid then
 		return
 	end
-
+	
 	if UnitLevel('player') < min_level then return end;
 	
 	local db = MethodAltManagerDB;
@@ -417,13 +417,12 @@ function AltManager:StoreData(data)
 			update = true;
 		end
 	end
-	
+
 	if not update then
 		db.data[guid] = data;
+		db.data[guid].coin_chance = 1;
 		db.alts = db.alts + 1;
 	else
-		local lvl = db.data[guid].artifact_level;
-		data.artifact_level = data.artifact_level or lvl;
 		db.data[guid] = data;
 	end
 end
@@ -444,17 +443,22 @@ function AltManager:CollectData(do_artifact)
 	
 	local name = UnitName('player')
 	local _, class = UnitClass('player')
-	local dungeon = nil;
 	local expire = nil;
 	local seals = nil;
 	local seals_bought = nil;
-	local next_research = nil;
+	
+	local coin_chance = nil;
 	
 	local guid = UnitGUID('player');
 
 	local mine_old = nil
 	if MethodAltManagerDB and MethodAltManagerDB.data then
 		mine_old = MethodAltManagerDB.data[guid];
+	end
+	if mine_old then
+		print("mine_old")
+		print(mine_old.coin_chance)
+		coin_chance = mine_old.coin_chance;
 	end
 	
 	-- find keystone (No keystone in Mop)
@@ -599,6 +603,8 @@ function AltManager:CollectData(do_artifact)
 	
 	char_table.dungeon = dungeon;
 	char_table.worldboss = worldboss;
+	char_table.coin_chance = coin_chance;
+
 	--Raid Siege of Orgrimmar
 	char_table.soo_flex = soo_flex;
 	char_table.soo_normal = soo_normal;
@@ -609,6 +615,31 @@ function AltManager:CollectData(do_artifact)
 	
 	
 	return char_table;
+end
+
+-- /script AltManager:IncreasCoinChance()
+function AltManager:IncreasCoinChance()
+	print("CoinInc")
+	if UnitLevel('player') < min_level and not self.addon_loaded  then return end;
+	
+	local db = MethodAltManagerDB;
+	local guid = UnitGUID('player');
+	
+	db.data = db.data or {};
+
+	db.data[guid].coin_chance =  db.data[guid].coin_chance + 1;
+end
+
+function AltManager:ResetCoinChance()
+	print("CoinDec")
+	if UnitLevel('player') < min_level and not self.addon_loaded  then return end;
+	
+	local db = MethodAltManagerDB;
+	local guid = UnitGUID('player');
+	
+	db.data = db.data or {};
+
+	db.data[guid].coin_chance =  1;
 end
 
 function AltManager:UpdateStrings()
@@ -832,13 +863,26 @@ function AltManager:CreateContent()
 		-- 	label = worldboss_label,
 		-- 	data = function(alt_data) return alt_data.worldboss or "?" end,
 		-- },
-		dummy_line = {
+		coin_chance= {
 			order = 12,
+			label = coin_chance_label,
+			data = function(alt_data) 
+				local zoneName = GetZoneText();
+				local chance = 32;
+				if zoneName == "Timeless Isle" or zoneName == "Siege of Orgrimmar" then
+					chance = 16;
+				end
+				return tostring(alt_data.coin_chance * chance) .. "%" .. "("..tostring(alt_data.coin_chance-1) ..")";
+
+			end,
+		},
+		dummy_line = {
+			order = 13,
 			label = " ",
 			data = function(alt_data) return " " end,
 		},
 		raid_unroll = {
-			order = 13,
+			order = 14,
 			data = "unroll",
 			name = "Instances >>",
 			unroll_function = function(button, my_rows)
@@ -859,7 +903,7 @@ function AltManager:CreateContent()
 			rows = {
 				soo = {
 					order = 1,
-					label = "Siege Of Orgrimmar",
+					label = "Siege of Orgrimmar",
 					data = function(alt_data) return self:MakeRaidString(alt_data.soo_flex, alt_data.soo_normal, alt_data.soo_heroic) end
 				}
 			}
