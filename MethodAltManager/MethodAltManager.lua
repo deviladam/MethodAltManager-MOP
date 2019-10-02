@@ -135,6 +135,7 @@ do
 	main_frame:RegisterEvent("CHAT_MSG_CURRENCY");
 	main_frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE");
   	main_frame:RegisterEvent("PLAYER_LEAVING_WORLD");
+	main_frame:RegisterEvent("BONUS_ROLL_RESULT");
 	
 
 	main_frame:SetScript("OnEvent", function(self, ...)
@@ -154,6 +155,16 @@ do
 		if (event == "BAG_UPDATE_DELAYED" or event == "QUEST_TURNED_IN" or event == "CHAT_MSG_CURRENCY" or event == "CURRENCY_DISPLAY_UPDATE") and AltManager.addon_loaded then
 			local data = AltManager:CollectData(false);
 			AltManager:StoreData(data);
+		end
+		
+		if (event == "BONUS_ROLL_RESULT") then
+			local _, typeIdentifier, itemLink, quantity, specID, sex, personalLootToast, currencyID, isSecondaryResult = ...
+			if (typeIdentifier == "money") then 
+				AltManager:IncreasCoinChance();
+			end
+			if (typeIdentifier == "item") then 
+				AltManager:ResetCoinChance();
+			end
 		end
 		
 	end)
@@ -615,9 +626,8 @@ function AltManager:CollectData(do_artifact)
 	return char_table;
 end
 
--- /script AltManager:IncreasCoinChance()
 function AltManager:IncreasCoinChance()
-	print("CoinInc")
+
 	if UnitLevel('player') < min_level and not self.addon_loaded  then return end;
 	
 	local db = MethodAltManagerDB;
@@ -629,7 +639,7 @@ function AltManager:IncreasCoinChance()
 end
 
 function AltManager:ResetCoinChance()
-	print("CoinDec")
+
 	if UnitLevel('player') < min_level and not self.addon_loaded  then return end;
 	
 	local db = MethodAltManagerDB;
