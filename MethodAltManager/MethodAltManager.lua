@@ -39,6 +39,8 @@ local conquest_label = "Conquest"
 local conquest_weekly_label = "Conquest Cap"
 
 local worldboss_label = "Worldboss"
+local celestials_label = "The Four Celestials"
+local ordos_label = "Ordos"											  		   
 
 local VERSION = "0.5.0"
 
@@ -269,8 +271,9 @@ function AltManager:ValidateReset()
 			-- reset this alt
 			char_table.seals_bought = 0;
 			char_table.expires = self:GetNextWeeklyResetTime();
-			char_table.worldboss = "-";
-			
+			--char_table.worldboss = "-";
+			char_table.celestials = "-";
+			char_table.ordos = "-";  
 			char_table.conquest_earned_this_week = 0;
 			char_table.valor_earned_this_week = 0;
 			char_table.soo_felx = 0;
@@ -562,8 +565,22 @@ function AltManager:CollectData(do_artifact)
 		end
 	end
 	
+	local celestials = "-"
+	local ordos = "-"
+	for i = 1, GetNumSavedWorldBosses() do
+		local name, worldBossID, reset = GetSavedWorldBossInfo(i);
+		
+		if name == "The Four Celestials" then
+			celestials = "Done"
+		end
+		if name == "Ordos" then
+			ordos = "Done"
+		end
+
+	end
 	
-	local worldbossquests = {
+	
+	--[[local worldbossquests = {
 		[52181] = "T'zane", 
 		[52169] = "Dunegorger Kraulok",
 		[52166] = "Warbringer Yenajz",
@@ -577,16 +594,12 @@ function AltManager:CollectData(do_artifact)
 			
 			worldboss = v 
 		end
-	end
+	end]]--
 	
 	local conquest = getConquestCap()
-	--DELETE
-	
 	local _, ilevel = GetAverageItemLevel();
-
 	local _, valor, _, valor_earned_this_week = GetCurrencyInfo(396);
 	local _, conquest, _, conquest_earned_this_week, conquest_weekly_max  = GetCurrencyInfo(390);
-
 
 	-- store data into a table
 
@@ -611,7 +624,9 @@ function AltManager:CollectData(do_artifact)
 	char_table.conquest_weekly_max = conquest_weekly_max;
 	
 	char_table.dungeon = dungeon;
-	char_table.worldboss = worldboss;
+	--char_table.worldboss = worldboss;
+	char_table.celestials = celestials;
+	char_table.ordos = ordos;
 	char_table.coin_chance = coin_chance;
 
 	--Raid Siege of Orgrimmar
@@ -854,8 +869,7 @@ function AltManager:CreateContent()
 			label = seals_owned_label,
 			data = function(alt_data) return tostring(alt_data.seals) .. "/10" end,
 		},
-		
-		--CONQUEST
+		--Conquest
 		--[[conquest = {
 			order = 10,
 			label = conquest_label,
@@ -866,6 +880,7 @@ function AltManager:CreateContent()
 			label = conquest_weekly_label,
 			data = function(alt_data) return (alt_data.conquest_earned_this_week and tostring(alt_data.conquest_earned_this_week) or "?")  .. "/" .. (alt_data.conquest_weekly_max and tostring(alt_data.conquest_weekly_max) or "?")  end,
 		},]]--
+
 
 		-- sort of became irrelevant for now
 		-- worldbosses = {
@@ -886,13 +901,23 @@ function AltManager:CreateContent()
 
 			end,
 		},
-		dummy_line = {
+		celestials_c = {
 			order = 13,
-			label = " ",
+			label = celestials_label,
+			data = function(alt_data) return alt_data.celestials or "?" end,
+		},
+		ordos_c = {
+			order = 14,
+			label = ordos_label,
+			data = function(alt_data) return alt_data.ordos or "?" end,
+		},
+		dummy_line = {
+			order = 15,
+			label = " asd",
 			data = function(alt_data) return " " end,
 		},
 		raid_unroll = {
-			order = 14,
+			order = 16,
 			data = "unroll",
 			name = "Instances >>",
 			unroll_function = function(button, my_rows)
@@ -918,6 +943,7 @@ function AltManager:CreateContent()
 				}
 			}
 		}
+
 	}
 	self.columns_table = column_table;
 
